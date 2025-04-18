@@ -5,9 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>USDJPY Trading Journal</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="container mx-auto p-4 max-w-4xl">
+        <!-- Progress Bar -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">Progress to $100,000 Goal</h2>
+            <div class="w-full bg-gray-200 rounded-full h-6">
+                <div id="progress-bar" class="bg-green-500 h-6 rounded-full text-center text-white font-bold" style="width: 0%">0%</div>
+            </div>
+            <p class="mt-2 text-sm">Current Balance: $<span id="progress-balance">100</span> / $100,000</p>
+        </div>
+
         <h1 class="text-3xl font-bold text-center mb-6">USDJPY Trading Journal</h1>
 
         <!-- Balance and Risk Info -->
@@ -85,7 +95,7 @@
         </div>
 
         <!-- Trade Log -->
-        <div id="trade-log" class="bg-white p-6 rounded shadow">
+        <div id="trade-log" class="bg-white p-6 rounded shadow mb-6">
             <h2 class="text-2xl font-semibold mb-4">Trade Log</h2>
             <button onclick="loadTrades()" class="mb-4 bg-gray-500 text-white px-4 py-2 rounded">Refresh Log</button>
             <table id="trade-table" class="w-full border-collapse">
@@ -110,6 +120,12 @@
                 <tbody id="trade-table-body"></tbody>
             </table>
         </div>
+
+        <!-- Wins/Losses Chart -->
+        <div class="bg-white p-6 rounded shadow">
+            <h2 class="text-2xl font-semibold mb-4">Wins and Losses Chart</h2>
+            <canvas id="win-loss-chart" height="100"></canvas>
+        </div>
     </div>
 
     <script>
@@ -122,12 +138,23 @@
         };
         let tradeStartTime = null;
         let currentBalance = parseFloat(document.getElementById('balance').value);
+        const goal = 100000; // $100,000 goal
+        let winLossChart = null;
 
-        // Update balance input and trade parameters
+        // Update balance input, trade parameters, progress, and chart
         document.getElementById('balance').addEventListener('change', () => {
             currentBalance = parseFloat(document.getElementById('balance').value);
             updateTradeParameters();
+            updateProgressBar();
         });
+
+        // Update progress bar
+        function updateProgressBar() {
+            const percentage = Math.min((currentBalance / goal) * 100, 100);
+            document.getElementById('progress-bar').style.width = `${percentage}%`;
+            document.getElementById('progress-bar').textContent = `${percentage.toFixed(1)}%`;
+            document.getElementById('progress-balance').textContent = currentBalance.toFixed(2);
+        }
 
         // Get risk percentage
         function getRiskPercent(tradeNumber) {
@@ -156,13 +183,66 @@
             document.getElementById('lot-size').textContent = lotSize.toFixed(2);
         }
 
+        // Update wins/losses chart
+        function updateWinLossChart() {
+            const trades = JSON.parse(localStorage.getItem('trades') || '[]');
+            const labels = trades.map(trade => trade.tradeNumber);
+            const data = trades.map(trade => trade.outcome === 'Win' ? 1 : 0);
+
+            if (winLossChart) {
+                winLossChart.destroy();
+            }
+
+            const ctx = document.getElementById('win-loss-chart').getContext('2d');
+            winLossChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Wins (1) / Losses (0)',
+                        data: trades.map(trade => ({
+                            x: trade.tradeNumber,
+                            y: trade.outcome === 'Win' ? 1 : 0
+                        })),
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        borderWidth: 1,
+                        pointRadius: 5,
+                        showLine: true
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Trade Number'
+                            },
+                            beginAtZero: true
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Outcome (Win=1, Loss=0)'
+                            },
+                            min: -0.5,
+                            max: 1.5,
+                            ticks: {
+                                stepSize: 0.5
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         // Set checklist value
         function setChecklist(key, value) {
             checklist[key] = value;
             document.getElementById(`${key}-status`).textContent = value ? '✅ Yes' : '❌ No';
         }
 
-        // Validate session (Asian/London open in EDT)
+        // Validate session (Asian/London open in EDT) - Commented out as requested
+        /*
         function isAllowedSession() {
             const now = new Date();
             const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -170,6 +250,7 @@
             const hour = edt.getHours();
             return (hour >= 19 || hour < 3) || (hour >= 3 && hour < 11);
         }
+        */
 
         // Get today's trade count
         function getTodayTradeCount() {
@@ -180,11 +261,14 @@
 
         // Submit checklist
         function submitChecklist() {
+            // Session check removed as requested - Uncomment isAllowedSession() to re-enable
+            /*
             if (!isAllowedSession()) {
                 document.getElementById('checklist-result').textContent = 'Trade Rejected: Only trade during Asian or London open.';
                 document.getElementById('checklist-result').classList.add('text-red-500');
                 return;
             }
+            */
 
             if (getTodayTradeCount() >= 2) {
                 document.getElementById('checklist-result').textContent = 'Trade Rejected: Maximum 2 trades per day reached.';
@@ -268,6 +352,8 @@
 
             loadTrades();
             updateTradeParameters();
+            updateProgressBar();
+            updateWinLossChart();
         }
 
         // Load trades
@@ -314,12 +400,16 @@
                 localStorage.setItem('trades', JSON.stringify(trades));
                 loadTrades();
                 updateTradeParameters();
+                updateProgressBar();
+                updateWinLossChart();
             }
         }
 
         // Initial load
         loadTrades();
         updateTradeParameters();
+        updateProgressBar();
+        updateWinLossChart();
     </script>
 </body>
 </html>
