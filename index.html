@@ -2,152 +2,55 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trading Journal</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-4 space-y-6">
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-6">
 
-  <h1 class="text-3xl font-bold mt-4">📈 Trading Journal</h1>
+  <h1 class="text-4xl font-bold mb-6">🧠 Smart Trading Journal + Dashboard</h1>
 
-  <div class="bg-gray-800 p-6 rounded-xl w-full max-w-md space-y-4 shadow-lg">
-    <div>
-      <label class="block mb-1 text-sm">Current Balance ($)</label>
-      <input id="balance" type="number" value="100" onchange="updateUI()" class="w-full p-2 rounded-lg bg-gray-700 text-white" />
-    </div>
-
-    <div class="space-y-2 text-sm text-gray-300">
-      <div>Risk Per Trade: <span id="risk-per-trade"></span></div>
-      <div>Lot Size: <span id="lot-size"></span></div>
-      <div>Margin Required: <span id="margin-required"></span></div>
-    </div>
-
-    <div class="w-full bg-gray-700 h-4 rounded-lg overflow-hidden">
-      <div id="progress-bar" class="h-4 bg-green-500" style="width: 0%"></div>
-    </div>
-    <div id="progress-text" class="text-xs text-center mt-1"></div>
-
-    <div class="flex flex-col space-y-2">
-      <select id="trade-outcome" class="p-2 bg-gray-700 rounded-lg">
-        <option value="win">✅ Win</option>
-        <option value="loss">❌ Loss</option>
-      </select>
-
-      <input id="trade-comments" type="text" placeholder="Comments (optional)" class="p-2 rounded-lg bg-gray-700" />
-      <input id="trade-screenshot-url" type="text" placeholder="Screenshot URL (optional)" class="p-2 rounded-lg bg-gray-700" />
-
-      <button onclick="logTrade()" class="bg-green-500 hover:bg-green-600 p-2 rounded-lg font-bold">Log Trade</button>
+  <!-- Dashboard -->
+  <div id="dashboard" class="w-full max-w-3xl p-6 bg-gray-800 rounded-2xl shadow-xl mb-8 space-y-4 text-center">
+    <div class="text-2xl font-bold">📊 Dashboard</div>
+    <div class="grid grid-cols-3 gap-4">
+      <div class="bg-gray-700 p-4 rounded-xl">
+        <div class="text-gray-400 text-sm">Total Trades</div>
+        <div id="total-trades" class="text-2xl font-bold">0</div>
+      </div>
+      <div class="bg-gray-700 p-4 rounded-xl">
+        <div class="text-gray-400 text-sm">Win %</div>
+        <div id="win-percentage" class="text-2xl font-bold">0%</div>
+      </div>
+      <div class="bg-gray-700 p-4 rounded-xl">
+        <div class="text-gray-400 text-sm">Net P&L</div>
+        <div id="net-profit" class="text-2xl font-bold">$0</div>
+      </div>
     </div>
   </div>
 
-  <div id="trade-log" class="w-full max-w-md flex flex-col space-y-4 mt-6"></div>
+  <!-- Trade Form -->
+  <div class="w-full max-w-3xl p-6 bg-gray-800 rounded-2xl shadow-xl mb-8 space-y-4">
+    <h2 class="text-2xl font-bold mb-4">New Trade</h2>
 
-  <script>
-    // 🔥 Firebase config
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+    <div class="flex space-x-2">
+      <button id="winBtn" class="flex-1 py-2 bg-green-600 rounded-lg font-bold">✅ Win</button>
+      <button id="lossBtn" class="flex-1 py-2 bg-red-600 rounded-lg font-bold">❌ Loss</button>
+    </div>
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    <input id="comment" type="text" placeholder="Comment..." class="w-full p-3 bg-gray-700 rounded-lg mt-4">
+    <input id="balance" type="number" placeholder="Account Balance $" class="w-full p-3 bg-gray-700 rounded-lg">
 
-    // 🧠 Calculate lot size and risk
-    function calculateLotSize(balance) {
-      const riskPercent = 0.2; // 20%
-      const riskAmount = balance * riskPercent;
-      const stopLossPips = 20;
-      const currentPrice = 150;
-      const pipValuePerStandardLot = (0.01 / currentPrice) * 100000; // ~6.67
+    <input id="screenshot" type="file" accept="image/*" class="w-full p-3 bg-gray-700 rounded-lg mt-2">
 
-      let lotSize = riskAmount / (stopLossPips * pipValuePerStandardLot);
+    <button id="submitBtn" class="w-full py-3 bg-blue-600 rounded-lg font-bold mt-4">Submit Trade</button>
+  </div>
 
-      const marginPerLot = (currentPrice * 100000) / 500;
-      const maxLotsByMargin = balance / marginPerLot;
+  <!-- Trade Log -->
+  <div id="trade-log" class="w-full max-w-3xl space-y-6"></div>
 
-      lotSize = Math.min(lotSize, maxLotsByMargin);
-
-      return {
-        lotSize: lotSize.toFixed(2),
-        riskAmount: riskAmount.toFixed(2),
-        marginRequired: (lotSize * marginPerLot).toFixed(2)
-      };
-    }
-
-    // 🚀 Update UI
-    function updateUI() {
-      const balanceInput = parseFloat(document.getElementById('balance').value) || 100;
-      const { lotSize, riskAmount, marginRequired } = calculateLotSize(balanceInput);
-      const progress = (balanceInput / 100000) * 100;
-
-      document.getElementById('risk-per-trade').textContent = `$${riskAmount} (20%)`;
-      document.getElementById('lot-size').textContent = lotSize;
-      document.getElementById('margin-required').textContent = `$${marginRequired}`;
-      document.getElementById('progress-bar').style.width = `${progress}%`;
-      document.getElementById('progress-text').textContent = `${progress.toFixed(2)}% ($${balanceInput} / $100,000)`;
-    }
-
-    // 📋 Load trades
-    async function loadTrades() {
-      const tradeLog = document.getElementById('trade-log');
-      tradeLog.innerHTML = '';
-      const snapshot = await db.collection('trades').orderBy('timestamp', 'desc').get();
-      snapshot.forEach(doc => {
-        const trade = doc.data();
-        tradeLog.innerHTML += `
-          <div class="p-4 bg-gray-700 rounded-xl shadow-lg space-y-2">
-            <div class="flex justify-between items-center">
-              <span class="font-bold text-lg">${trade.outcome === 'win' ? '✅ Win' : '❌ Loss'}</span>
-              <span class="text-sm text-gray-300">${new Date(trade.timestamp).toLocaleDateString()}</span>
-            </div>
-            <p class="text-gray-400">${trade.comments || 'No comments.'}</p>
-            ${trade.screenshotURL ? `<img src="${trade.screenshotURL}" class="mt-2 rounded-lg" />` : ''}
-            <div class="flex justify-between text-sm text-gray-400 mt-2">
-              <span>Balance After: $${trade.balanceAfter.toFixed(2)}</span>
-              <span>Lot Size: ${trade.lotSize}</span>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    // ➕ Log new trade
-    async function logTrade() {
-      const outcome = document.getElementById('trade-outcome').value;
-      const comments = document.getElementById('trade-comments').value;
-      const screenshotURL = document.getElementById('trade-screenshot-url').value;
-
-      const balanceInput = parseFloat(document.getElementById('balance').value) || 100;
-      let { lotSize, riskAmount } = calculateLotSize(balanceInput);
-
-      let newBalance = outcome === 'win' 
-        ? balanceInput + parseFloat(riskAmount) 
-        : balanceInput - parseFloat(riskAmount);
-
-      await db.collection('trades').add({
-        outcome,
-        comments,
-        screenshotURL,
-        balanceAfter: newBalance,
-        lotSize: parseFloat(lotSize),
-        timestamp: Date.now()
-      });
-
-      document.getElementById('balance').value = newBalance.toFixed(2);
-      updateUI();
-      loadTrades();
-    }
-
-    // 🏁 Initial load
-    updateUI();
-    loadTrades();
-  </script>
-
+  <script src="app.js"></script>
 </body>
 </html>
