@@ -3,132 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>USDJPY Trading Journal</title>
+    <title>ShamsTradingJourney</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-black font-sans text-white">
     <div class="container mx-auto p-4 max-w-4xl">
-        <!-- Progress Bar -->
+        <!-- Header -->
+        <h1 class="text-5xl font-bold text-center mb-4 text-white">ShamsTradingJourney</h1>
+        <!-- Balance and Progress -->
         <div class="mb-6">
-            <h2 class="text-xl font-semibold mb-2">Progress to $100,000 Goal</h2>
-            <div class="w-full bg-gray-200 rounded-full h-6">
-                <div id="progress-bar" class="bg-green-500 h-6 rounded-full text-center text-white font-bold" style="width: 0%">0%</div>
-            </div>
-            <p class="mt-2 text-sm">Current Balance: $<span id="progress-balance">100</span> / $100,000</p>
-        </div>
-
-        <h1 class="text-3xl font-bold text-center mb-6">USDJPY Trading Journal</h1>
-
-        <!-- Balance and Risk Info -->
-        <div class="flex flex-col md:flex-row md:items-center md:space-x-4 mb-6">
-            <div class="mb-4 md:mb-0">
-                <label class="block text-lg font-medium mb-2">Current Balance (USD):</label>
-                <input type="number" id="balance" value="100" step="0.01" class="w-full p-2 border rounded">
-            </div>
-            <div class="bg-white p-4 rounded shadow">
-                <h3 class="text-lg font-semibold mb-2">Trade Parameters</h3>
-                <p>Risk Percentage: <span id="risk-percent" class="font-bold">20.0%</span></p>
-                <p>Lot Size: <span id="lot-size" class="font-bold">0.15</span></p>
+            <label for="balance" class="block text-lg font-medium mb-2">Account Balance ($):</label>
+            <input type="number" id="balance" value="100" step="0.01" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <div class="mt-4">
+                <label for="progress" class="block text-lg font-medium mb-2">Progress to $100,000:</label>
+                <div class="w-full bg-gray-700 rounded-full h-4">
+                    <div id="progress-bar" class="bg-blue-600 h-4 rounded-full" style="width: 0.1%"></div>
+                </div>
+                <p id="progress-text" class="text-sm mt-1">0.1% of goal ($100 / $100,000)</p>
             </div>
         </div>
-
-        <!-- Checklist Screen -->
-        <div id="checklist-screen" class="bg-white p-6 rounded shadow mb-6">
-            <h2 class="text-2xl font-semibold mb-4">Trade Checklist</h2>
-            <div class="grid grid-cols-1 gap-4">
-                <div>
-                    <label class="block mb-1">5-min EMA Crossover?</label>
-                    <button onclick="setChecklist('ema', true)" class="bg-green-500 text-white px-4 py-2 rounded mr-2">Yes</button>
-                    <button onclick="setChecklist('ema', false)" class="bg-red-500 text-white px-4 py-2 rounded">No</button>
-                    <span id="ema-status" class="ml-2"></span>
+        <!-- Checklist -->
+        <div class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">USDJPY Trading Checklist</h2>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span>EMA Alignment (5 & 13):</span>
+                    <div class="space-x-2">
+                        <button onclick="setChecklist('ema', true)" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Yes</button>
+                        <button onclick="setChecklist('ema', false)" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">No</button>
+                    </div>
                 </div>
-                <div>
-                    <label class="block mb-1">5-min MACD Crossover?</label>
-                    <button onclick="setChecklist('macd', true)" class="bg-green-500 text-white px-4 py-2 rounded mr-2">Yes</button>
-                    <button onclick="setChecklist('macd', false)" class="bg-red-500 text-white px-4 py-2 rounded">No</button>
-                    <span id="macd-status" class="ml-2"></span>
+                <div class="flex items-center justify-between">
+                    <span>MACD Confirmation:</span>
+                    <div class="space-x-2">
+                        <button onclick="setChecklist('macd', true)" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Yes</button>
+                        <button onclick="setChecklist('macd', false)" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">No</button>
+                    </div>
                 </div>
-                <div>
-                    <label class="block mb-1">Pullback Candle Closed?</label>
-                    <button onclick="setChecklist('pullback', true)" class="bg-green-500 text-white px-4 py-2 rounded mr-2">Yes</button>
-                    <button onclick="setChecklist('pullback', false)" class="bg-red-500 text-white px-4 py-2 rounded">No</button>
-                    <span id="pullback-status" class="ml-2"></span>
+                <div class="flex items-center justify-between">
+                    <span>Pullback Identified:</span>
+                    <div class="space-x-2">
+                        <button onclick="setChecklist('pullback', true)" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Yes</button>
+                        <button onclick="setChecklist('pullback', false)" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">No</button>
+                    </div>
                 </div>
-                <div>
-                    <label class="block mb-1">Supertrend Active in Direction?</label>
-                    <button onclick="setChecklist('supertrend', true)" class="bg-green-500 text-white px-4 py-2 rounded mr-2">Yes</button>
-                    <button onclick="setChecklist('supertrend', false)" class="bg-red-500 text-white px-4 py-2 rounded">No</button>
-                    <span id="supertrend-status" class="ml-2"></span>
+                <div class="flex items-center justify-between">
+                    <span>Supertrend Direction:</span>
+                    <div class="space-x-2">
+                        <button onclick="setChecklist('supertrend', true)" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Yes</button>
+                        <button onclick="setChecklist('supertrend', false)" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">No</button>
+                    </div>
                 </div>
-                <div>
-                    <label class="block mb-1">Traded Less Than 2 Times Today?</label>
-                    <button onclick="setChecklist('tradeCount', true)" class="bg-green-500 text-white px-4 py-2 rounded mr-2">Yes</button>
-                    <button onclick="setChecklist('tradeCount', false)" class="bg-red-500 text-white px-4 py-2 rounded">No</button>
-                    <span id="tradeCount-status" class="ml-2"></span>
+                <div class="flex items-center justify-between">
+                    <span>Trade Count (Max 2/Day):</span>
+                    <div class="space-x-2">
+                        <button onclick="setChecklist('tradeCount', true)" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Yes</button>
+                        <button onclick="setChecklist('tradeCount', false)" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">No</button>
+                    </div>
                 </div>
             </div>
-            <button onclick="submitChecklist()" class="mt-4 bg-blue-500 text-white px-6 py-2 rounded">Submit Checklist</button>
-            <p id="checklist-result" class="mt-4 text-lg"></p>
+            <button onclick="submitChecklist()" class="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">Submit Checklist</button>
+            <p id="checklist-result" class="mt-2 text-center font-medium"></p>
         </div>
-
-        <!-- Trade Entry Screen -->
-        <div id="trade-entry-screen" class="hidden bg-white p-6 rounded shadow mb-6">
-            <h2 class="text-2xl font-semibold mb-4">Enter Trade Details</h2>
-            <p id="trade-time" class="mb-4"></p>
-            <div class="mb-4">
-                <label class="block mb-1">Outcome:</label>
-                <select id="outcome" class="w-full p-2 border rounded">
-                    <option value="Win">Win</option>
-                    <option value="Loss">Loss</option>
-                </select>
+        <!-- Trade Entry -->
+        <div id="trade-entry" class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md hidden">
+            <h2 class="text-2xl font-semibold mb-4">Log Trade</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="trade-outcome" class="block text-lg font-medium mb-2">Trade Outcome:</label>
+                    <select id="trade-outcome" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="win">Win</option>
+                        <option value="loss">Loss</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="trade-comments" class="block text-lg font-medium mb-2">Comments:</label>
+                    <textarea id="trade-comments" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
+                </div>
+                <div>
+                    <label for="trade-screenshot" class="block text-lg font-medium mb-2">Screenshot URL (Optional):</label>
+                    <input type="text" id="trade-screenshot" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Paste URL here" />
+                </div>
             </div>
-            <div class="mb-4">
-                <label class="block mb-1">Screenshot (optional):</label>
-                <input type="file" id="screenshot" accept="image/*" class="w-full p-2 border rounded">
-            </div>
-            <div class="mb-4">
-                <label class="block mb-1">Comments:</label>
-                <textarea id="comments" class="w-full p-2 border rounded" rows="4"></textarea>
-            </div>
-            <button onclick="logTrade()" class="bg-blue-500 text-white px-6 py-2 rounded">Log Trade</button>
+            <button onclick="logTrade()" class="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">Log Trade</button>
         </div>
-
         <!-- Trade Log -->
-        <div id="trade-log" class="bg-white p-6 rounded shadow mb-6">
+        <div class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
             <h2 class="text-2xl font-semibold mb-4">Trade Log</h2>
-            <button onclick="loadTrades()" class="mb-4 bg-gray-500 text-white px-4 py-2 rounded">Refresh Log</button>
-            <table id="trade-table" class="w-full border-collapse">
-                <thead>
-                    <tr class="bg-gray-200">
-                        <th class="border p-2">Trade#</th>
-                        <th class="border p-2">Date</th>
-                        <th class="border p-2">Time</th>
-                        <th class="border p-2">Session</th>
-                        <th class="border p-2">Balance</th>
-                        <th class="border p-2">Risk%</th>
-                        <th class="border p-2">Risk Amt</th>
-                        <th class="border p-2">Lot Size</th>
-                        <th class="border p-2">Outcome</th>
-                        <th class="border p-2">P/L</th>
-                        <th class="border p-2">New Balance</th>
-                        <th class="border p-2">Comments</th>
-                        <th class="border p-2">Screenshot</th>
-                        <th class="border p-2">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="trade-table-body"></tbody>
-            </table>
+            <button onclick="loadTrades()" class="mb-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">Refresh Trades</button>
+            <div id="trade-log" class="space-y-4"></div>
         </div>
-
+        <!-- Risk and Lot Size -->
+        <div class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">Risk & Lot Size</h2>
+            <p>Risk per Trade: <span id="risk-per-trade">0.2%</span></p>
+            <p>Lot Size: <span id="lot-size">0.02</span></p>
+        </div>
         <!-- Wins/Losses Chart -->
-        <div class="bg-white p-6 rounded shadow">
-            <h2 class="text-2xl font-semibold mb-4">Wins and Losses Chart</h2>
-            <canvas id="win-loss-chart" height="100"></canvas>
+        <div class="p-4 bg-gray-800 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">Wins vs Losses</h2>
+            <canvas id="winLossChart"></canvas>
         </div>
     </div>
 
     <script>
+        // Firebase Initialization
+        const firebaseConfig = {
+            apiKey: "AIzaSyBcAUB1jY7_D4Bh27omjl1RNwRe112z7iU",
+            authDomain: "shamstradingjourney.firebaseapp.com",
+            projectId: "shamstradingjourney",
+            storageBucket: "shamstradingjourney.firebasestorage.app",
+            messagingSenderId: "974388489062",
+            appId: "1:974388489062:web:14b23d225b4687fb8236a7"
+        };
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Checklist State
         let checklist = {
             ema: null,
             macd: null,
@@ -136,280 +131,162 @@
             supertrend: null,
             tradeCount: null
         };
-        let tradeStartTime = null;
-        let currentBalance = parseFloat(document.getElementById('balance').value);
-        const goal = 100000; // $100,000 goal
-        let winLossChart = null;
 
-        // Update balance input, trade parameters, progress, and chart
-        document.getElementById('balance').addEventListener('change', () => {
-            currentBalance = parseFloat(document.getElementById('balance').value);
-            updateTradeParameters();
-            updateProgressBar();
+        // Trade Data
+        let trades = [];
+        let balance = parseFloat(document.getElementById('balance').value) || 100;
+        const goal = 100000;
+        let wins = 0, losses = 0;
+
+        // Chart
+        const ctx = document.getElementById('winLossChart').getContext('2d');
+        const winLossChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Wins',
+                    data: [],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: false
+                }, {
+                    label: 'Losses',
+                    data: [],
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: 'Trade Number', color: '#ffffff' }, ticks: { color: '#ffffff' } },
+                    y: { title: { display: true, text: 'Count', color: '#ffffff' }, ticks: { color: '#ffffff' }, beginAtZero: true }
+                },
+                plugins: { legend: { labels: { color: '#ffffff' } } },
+                responsive: true,
+                maintainAspectRatio: false,
+                backgroundColor: 'transparent'
+            }
         });
 
-        // Update progress bar
-        function updateProgressBar() {
-            const percentage = Math.min((currentBalance / goal) * 100, 100);
-            document.getElementById('progress-bar').style.width = `${percentage}%`;
-            document.getElementById('progress-bar').textContent = `${percentage.toFixed(1)}%`;
-            document.getElementById('progress-balance').textContent = currentBalance.toFixed(2);
+        // Update Balance and Progress
+        function updateBalanceAndProgress() {
+            balance = parseFloat(document.getElementById('balance').value) || 100;
+            const progress = (balance / goal) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-text').textContent = `${progress.toFixed(2)}% of goal ($${balance.toFixed(2)} / $${goal.toFixed(2)})`;
+            updateRiskAndLotSize();
         }
 
-        // Get risk percentage
-        function getRiskPercent(tradeNumber) {
-            if (tradeNumber <= 40) return 0.20;
-            else if (tradeNumber == 41) return 0.186;
-            else if (tradeNumber == 42) return 0.157;
-            else if (tradeNumber == 43) return 0.136;
-            else if (tradeNumber == 44) return 0.119;
-            else if (tradeNumber == 45) return 0.107;
-            else if (tradeNumber == 46) return 0.096;
-            else if (tradeNumber == 47) return 0.088;
-            else if (tradeNumber == 48) return 0.081;
-            else if (tradeNumber == 49) return 0.075;
-            else return 0.070;
+        // Update Risk and Lot Size
+        function updateRiskAndLotSize() {
+            const riskPerTrade = (balance * 0.002).toFixed(2); // 0.2% risk
+            const lotSize = (riskPerTrade / 1000).toFixed(2); // Simplified lot size calc
+            document.getElementById('risk-per-trade').textContent = `$${riskPerTrade}`;
+            document.getElementById('lot-size').textContent = lotSize;
         }
 
-        // Update trade parameters display
-        function updateTradeParameters() {
-            const trades = JSON.parse(localStorage.getItem('trades') || '[]');
-            const tradeNumber = trades.length + 1;
-            const riskPercent = getRiskPercent(tradeNumber);
-            const riskAmount = currentBalance * riskPercent;
-            const lotSize = Math.min(riskAmount / 200, currentBalance / 200, 200);
-
-            document.getElementById('risk-percent').textContent = `${(riskPercent * 100).toFixed(1)}%`;
-            document.getElementById('lot-size').textContent = lotSize.toFixed(2);
-        }
-
-        // Update wins/losses chart
-        function updateWinLossChart() {
-            const trades = JSON.parse(localStorage.getItem('trades') || '[]');
-            const labels = trades.map(trade => trade.tradeNumber);
-            const data = trades.map(trade => trade.outcome === 'Win' ? 1 : 0);
-
-            if (winLossChart) {
-                winLossChart.destroy();
-            }
-
-            const ctx = document.getElementById('win-loss-chart').getContext('2d');
-            winLossChart = new Chart(ctx, {
-                type: 'scatter',
-                data: {
-                    datasets: [{
-                        label: 'Wins (1) / Losses (0)',
-                        data: trades.map(trade => ({
-                            x: trade.tradeNumber,
-                            y: trade.outcome === 'Win' ? 1 : 0
-                        })),
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                        borderWidth: 1,
-                        pointRadius: 5,
-                        showLine: true
-                    }]
-                },
-                options: {
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Trade Number'
-                            },
-                            beginAtZero: true
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Outcome (Win=1, Loss=0)'
-                            },
-                            min: -0.5,
-                            max: 1.5,
-                            ticks: {
-                                stepSize: 0.5
-                            }
-                        }
-                    }
-                }
+        // Load Trades from Firestore
+        async function loadTrades() {
+            trades = [];
+            const snapshot = await db.collection('trades').orderBy('tradeNumber').get();
+            snapshot.forEach(doc => {
+                trades.push(doc.data());
             });
+            renderTradeLog();
+            updateChart();
         }
 
-        // Set checklist value
-        function setChecklist(key, value) {
-            checklist[key] = value;
-            document.getElementById(`${key}-status`).textContent = value ? '✅ Yes' : '❌ No';
-        }
-
-        // Validate session (Asian/London open in EDT) - Commented out as requested
-        /*
-        function isAllowedSession() {
-            const now = new Date();
-            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-            const edt = new Date(utc - (4 * 3600000)); // EDT is UTC-4
-            const hour = edt.getHours();
-            return (hour >= 19 || hour < 3) || (hour >= 3 && hour < 11);
-        }
-        */
-
-        // Get today's trade count
-        function getTodayTradeCount() {
-            const trades = JSON.parse(localStorage.getItem('trades') || '[]');
-            const today = new Date().toISOString().split('T')[0];
-            return trades.filter(trade => trade.date.split(', ')[0].split('/').reverse().join('-').includes(today)).length;
-        }
-
-        // Submit checklist
-        function submitChecklist() {
-            // Session check removed as requested - Uncomment isAllowedSession() to re-enable
-            /*
-            if (!isAllowedSession()) {
-                document.getElementById('checklist-result').textContent = 'Trade Rejected: Only trade during Asian or London open.';
-                document.getElementById('checklist-result').classList.add('text-red-500');
-                return;
-            }
-            */
-
-            if (getTodayTradeCount() >= 2) {
-                document.getElementById('checklist-result').textContent = 'Trade Rejected: Maximum 2 trades per day reached.';
-                document.getElementById('checklist-result').classList.add('text-red-500');
-                return;
-            }
-
-            if (Object.values(checklist).every(val => val === true)) {
-                tradeStartTime = new Date();
-                document.getElementById('checklist-result').textContent = 'Green Light: Enter Trade!';
-                document.getElementById('checklist-result').classList.remove('text-red-500');
-                document.getElementById('checklist-result').classList.add('text-green-500');
-                document.getElementById('trade-time').textContent = `Trade Start Time: ${tradeStartTime.toLocaleString()}`;
-                document.getElementById('checklist-screen').classList.add('hidden');
-                document.getElementById('trade-entry-screen').classList.remove('hidden');
-            } else {
-                document.getElementById('checklist-result').textContent = 'Trade Rejected: All conditions must be Yes.';
-                document.getElementById('checklist-result').classList.add('text-red-500');
-            }
-        }
-
-        // Log trade
-        function logTrade() {
-            const outcome = document.getElementById('outcome').value;
-            const comments = document.getElementById('comments').value;
-            const screenshotInput = document.getElementById('screenshot');
-            let screenshot = '';
-            if (screenshotInput.files.length > 0) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    screenshot = e.target.result;
-                    saveTrade(outcome, comments, screenshot);
-                };
-                reader.readAsDataURL(screenshotInput.files[0]);
-            } else {
-                saveTrade(outcome, comments, screenshot);
-            }
-        }
-
-        function saveTrade(outcome, comments, screenshot) {
-            const trades = JSON.parse(localStorage.getItem('trades') || '[]');
-            const tradeNumber = trades.length + 1;
-            const riskPercent = getRiskPercent(tradeNumber);
-            const riskAmount = currentBalance * riskPercent;
-            const lotSize = Math.min(riskAmount / 200, currentBalance / 200, 200);
-            const profitLoss = outcome === 'Win' ? (20 * lotSize * 10) : (-riskAmount);
-            const newBalance = currentBalance + profitLoss;
-            const session = new Date().getHours() >= 19 || new Date().getHours() < 3 ? 'Asian' : 'London';
-
-            const trade = {
-                tradeNumber,
-                date: tradeStartTime.toLocaleString(),
-                session,
-                balance: currentBalance,
-                riskPercent,
-                riskAmount,
-                lotSize,
-                outcome,
-                profitLoss,
-                newBalance,
-                comments,
-                screenshot
-            };
-
+        // Save Trade to Firestore
+        async function saveTrade(trade) {
+            const tradeId = Date.now().toString();
+            await db.collection('trades').doc(tradeId).set(trade);
             trades.push(trade);
-            localStorage.setItem('trades', JSON.stringify(trades));
-            currentBalance = newBalance;
-            document.getElementById('balance').value = currentBalance.toFixed(2);
-
-            // Reset UI
-            document.getElementById('trade-entry-screen').classList.add('hidden');
-            document.getElementById('checklist-screen').classList.remove('hidden');
-            document.getElementById('checklist-result').textContent = '';
-            Object.keys(checklist).forEach(key => {
-                checklist[key] = null;
-                document.getElementById(`${key}-status`).textContent = '';
-            });
-            document.getElementById('outcome').value = 'Win';
-            document.getElementById('comments').value = '';
-            document.getElementById('screenshot').value = '';
-
-            loadTrades();
-            updateTradeParameters();
-            updateProgressBar();
-            updateWinLossChart();
+            renderTradeLog();
+            updateChart();
         }
 
-        // Load trades
-        function loadTrades() {
-            const trades = JSON.parse(localStorage.getItem('trades') || '[]');
-            const tbody = document.getElementById('trade-table-body');
-            tbody.innerHTML = '';
+        // Delete Trade from Firestore
+        async function deleteTrade(tradeId) {
+            await db.collection('trades').doc(tradeId).delete();
+            trades = trades.filter(trade => trade.tradeId !== tradeId);
+            renderTradeLog();
+            updateChart();
+        }
+
+        // Render Trade Log
+        function renderTradeLog() {
+            const tradeLog = document.getElementById('trade-log');
+            tradeLog.innerHTML = '';
             trades.forEach(trade => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="border p-2">${trade.tradeNumber}</td>
-                    <td class="border p-2">${trade.date.split(', ')[0]}</td>
-                    <td class="border p-2">${trade.date.split(', ')[1]}</td>
-                    <td class="border p-2">${trade.session}</td>
-                    <td class="border p-2">${trade.balance.toFixed(2)}</td>
-                    <td class="border p-2">${(trade.riskPercent * 100).toFixed(1)}%</td>
-                    <td class="border p-2">${trade.riskAmount.toFixed(2)}</td>
-                    <td class="border p-2">${trade.lotSize.toFixed(2)}</td>
-                    <td class="border p-2">${trade.outcome}</td>
-                    <td class="border p-2">${trade.profitLoss.toFixed(2)}</td>
-                    <td class="border p-2">${trade.newBalance.toFixed(2)}</td>
-                    <td class="border p-2">${trade.comments}</td>
-                    <td class="border p-2">${trade.screenshot ? '<button onclick="viewScreenshot(\'' + trade.screenshot + '\')" class="text-blue-500">View</button>' : ''}</td>
-                    <td class="border p-2"><button onclick="deleteTrade(${trade.tradeNumber})" class="text-red-500">Delete</button></td>
+                const tradeDiv = document.createElement('div');
+                tradeDiv.className = 'p-4 bg-gray-700 rounded-lg';
+                tradeDiv.innerHTML = `
+                    <p><strong>Trade #${trade.tradeNumber}</strong>: ${trade.outcome.charAt(0).toUpperCase() + trade.outcome.slice(1)}</p>
+                    <p>Comments: ${trade.comments}</p>
+                    ${trade.screenshot ? `<p><a href="${trade.screenshot}" target="_blank" class="text-blue-400 underline">View Screenshot</a></p>` : ''}
+                    <button onclick="deleteTrade('${trade.tradeId}')" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">Delete</button>
                 `;
-                tbody.appendChild(row);
+                tradeLog.appendChild(tradeDiv);
             });
         }
 
-        // View screenshot
-        function viewScreenshot(dataUrl) {
-            const win = window.open();
-            win.document.write(`<img src="${dataUrl}" style="max-width:100%;">`);
+        // Update Chart
+        function updateChart() {
+            wins = trades.filter(trade => trade.outcome === 'win').length;
+            losses = trades.filter(trade => trade.outcome === 'loss').length;
+            const labels = trades.map(trade => trade.tradeNumber);
+            const winData = trades.map(trade => trade.outcome === 'win' ? 1 : 0);
+            const lossData = trades.map(trade => trade.outcome === 'loss' ? 1 : 0);
+            winLossChart.data.labels = labels;
+            winLossChart.data.datasets[0].data = winData;
+            winLossChart.data.datasets[1].data = lossData;
+            winLossChart.update();
         }
 
-        // Delete trade
-        function deleteTrade(tradeNumber) {
-            if (confirm('Are you sure you want to delete this trade?')) {
-                let trades = JSON.parse(localStorage.getItem('trades') || '[]');
-                trades = trades.filter(trade => trade.tradeNumber !== tradeNumber);
-                trades.forEach((trade, index) => {
-                    trade.tradeNumber = index + 1;
-                });
-                localStorage.setItem('trades', JSON.stringify(trades));
-                loadTrades();
-                updateTradeParameters();
-                updateProgressBar();
-                updateWinLossChart();
+        // Set Checklist Item
+        function setChecklist(item, value) {
+            checklist[item] = value;
+            document.getElementById('checklist-result').textContent = '';
+            document.getElementById('trade-entry').classList.add('hidden');
+        }
+
+        // Submit Checklist
+        function submitChecklist() {
+            const allYes = Object.values(checklist).every(value => value === true);
+            const resultText = allYes ? 'Green Light: Proceed with Trade' : 'Reject: Checklist Not Met';
+            document.getElementById('checklist-result').textContent = resultText;
+            document.getElementById('checklist-result').className = `mt-2 text-center font-medium ${allYes ? 'text-green-400' : 'text-red-400'}`;
+            document.getElementById('trade-entry').classList.toggle('hidden', !allYes);
+        }
+
+        // Log Trade
+        function logTrade() {
+            const outcome = document.getElementById('trade-outcome').value;
+            const comments = document.getElementById('trade-comments').value;
+            const screenshot = document.getElementById('trade-screenshot').value;
+            const tradeNumber = trades.length + 1;
+            const trade = { tradeId: Date.now().toString(), tradeNumber, outcome, comments, screenshot };
+            saveTrade(trade);
+            if (outcome === 'win') {
+                balance *= 1.2; // 20% gain
+            } else {
+                balance *= 0.998; // 0.2% loss
             }
+            document.getElementById('balance').value = balance.toFixed(2);
+            updateBalanceAndProgress();
+            document.getElementById('trade-entry').classList.add('hidden');
+            document.getElementById('checklist-result').textContent = '';
+            Object.keys(checklist).forEach(key => checklist[key] = null);
         }
 
-        // Initial load
+        // Event Listeners
+        document.getElementById('balance').addEventListener('input', updateBalanceAndProgress);
+
+        // Initial Load
+        updateBalanceAndProgress();
         loadTrades();
-        updateTradeParameters();
-        updateProgressBar();
-        updateWinLossChart();
     </script>
 </body>
 </html>
