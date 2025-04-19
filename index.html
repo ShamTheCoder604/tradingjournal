@@ -2,55 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trading Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.17.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore-compat.js"></script>
+  <title>Sham's Trading Journal</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-6">
+<body>
+  <div class="container">
+    <h1>Sham's USDJPY Trading Journal 📈</h1>
 
-  <h1 class="text-4xl font-bold mb-6">🧠 Smart Trading Journal + Dashboard</h1>
-
-  <!-- Dashboard -->
-  <div id="dashboard" class="w-full max-w-3xl p-6 bg-gray-800 rounded-2xl shadow-xl mb-8 space-y-4 text-center">
-    <div class="text-2xl font-bold">📊 Dashboard</div>
-    <div class="grid grid-cols-3 gap-4">
-      <div class="bg-gray-700 p-4 rounded-xl">
-        <div class="text-gray-400 text-sm">Total Trades</div>
-        <div id="total-trades" class="text-2xl font-bold">0</div>
-      </div>
-      <div class="bg-gray-700 p-4 rounded-xl">
-        <div class="text-gray-400 text-sm">Win %</div>
-        <div id="win-percentage" class="text-2xl font-bold">0%</div>
-      </div>
-      <div class="bg-gray-700 p-4 rounded-xl">
-        <div class="text-gray-400 text-sm">Net P&L</div>
-        <div id="net-profit" class="text-2xl font-bold">$0</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Trade Form -->
-  <div class="w-full max-w-3xl p-6 bg-gray-800 rounded-2xl shadow-xl mb-8 space-y-4">
-    <h2 class="text-2xl font-bold mb-4">New Trade</h2>
-
-    <div class="flex space-x-2">
-      <button id="winBtn" class="flex-1 py-2 bg-green-600 rounded-lg font-bold">✅ Win</button>
-      <button id="lossBtn" class="flex-1 py-2 bg-red-600 rounded-lg font-bold">❌ Loss</button>
+    <div class="section">
+      <label for="balance">Account Balance ($):</label>
+      <input type="number" id="balance" placeholder="Enter balance">
+      <button id="calculateLot">Calculate Lot Size</button>
+      <div id="lotSizeResult"></div>
     </div>
 
-    <input id="comment" type="text" placeholder="Comment..." class="w-full p-3 bg-gray-700 rounded-lg mt-4">
-    <input id="balance" type="number" placeholder="Account Balance $" class="w-full p-3 bg-gray-700 rounded-lg">
+    <div class="section checklist">
+      <h2>Entry Checklist ✅</h2>
+      <label><input type="checkbox" class="checklist"> 5 Min EMA Crossover</label>
+      <label><input type="checkbox" class="checklist"> 5 Min MACD Crossover before EMA</label>
+      <label><input type="checkbox" class="checklist"> Pullback candle closed</label>
+      <label><input type="checkbox" class="checklist"> Supertrend active in trade direction</label>
+      <label><input type="checkbox" class="checklist"> Only Asian or London Open trade</label>
+    </div>
 
-    <input id="screenshot" type="file" accept="image/*" class="w-full p-3 bg-gray-700 rounded-lg mt-2">
+    <div class="section">
+      <h2>Trade Outcome 🏁</h2>
+      <button id="wonButton" disabled>Won</button>
+      <button id="lostButton" disabled>Lost</button>
+    </div>
 
-    <button id="submitBtn" class="w-full py-3 bg-blue-600 rounded-lg font-bold mt-4">Submit Trade</button>
+    <div class="section">
+      <textarea id="comments" placeholder="Comments (entry reason, notes...)"></textarea>
+      <button id="submitTrade" disabled>Submit Trade</button>
+    </div>
+
+    <div class="section log">
+      <h2>Trade Log 📜</h2>
+      <div id="tradeHistory"></div>
+    </div>
+
   </div>
 
-  <!-- Trade Log -->
-  <div id="trade-log" class="w-full max-w-3xl space-y-6"></div>
-
-  <script src="app.js"></script>
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
