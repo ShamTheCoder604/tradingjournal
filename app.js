@@ -1,6 +1,7 @@
 import { db } from './firebase-config.js';
 import { collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
+// DOM Elements
 const balanceInput = document.getElementById('balance');
 const calculateLotButton = document.getElementById('calculateLot');
 const lotSizeResult = document.getElementById('lotSizeResult');
@@ -11,20 +12,23 @@ const submitTrade = document.getElementById('submitTrade');
 const commentsInput = document.getElementById('comments');
 const tradeHistory = document.getElementById('tradeHistory');
 
+// Store trade result
 let tradeResult = '';
 
+// Calculate lot size based on account balance
 calculateLotButton.addEventListener('click', () => {
   const balance = parseFloat(balanceInput.value);
   if (!isNaN(balance) && balance > 0) {
-    let riskAmount = balance * 0.20;
+    let riskAmount = balance * 0.20; // 20% risk
     let lotSize = riskAmount / 20; // 20 pip SL
     if (lotSize > 200) lotSize = 200;
     lotSizeResult.innerText = `Recommended Lot Size: ${lotSize.toFixed(2)} lots`;
   } else {
-    lotSizeResult.innerText = 'Enter a valid balance!';
+    lotSizeResult.innerText = 'Please enter a valid balance.';
   }
 });
 
+// Enable buttons after checking all checkboxes
 checklistItems.forEach(item => {
   item.addEventListener('change', () => {
     const allChecked = Array.from(checklistItems).every(i => i.checked);
@@ -34,6 +38,7 @@ checklistItems.forEach(item => {
   });
 });
 
+// Trade result
 wonButton.addEventListener('click', () => {
   tradeResult = 'Won';
 });
@@ -42,10 +47,11 @@ lostButton.addEventListener('click', () => {
   tradeResult = 'Lost';
 });
 
+// Submit trade and log to Firebase
 submitTrade.addEventListener('click', async () => {
   const balance = parseFloat(balanceInput.value);
   if (!balance || !tradeResult) {
-    alert('Fill everything first!');
+    alert('Please complete the checklist and provide a valid balance.');
     return;
   }
 
@@ -60,21 +66,22 @@ submitTrade.addEventListener('click', async () => {
 
   try {
     await addDoc(collection(db, "trades"), tradeData);
-    alert('Trade Logged Successfully!');
+    alert('Trade logged successfully!');
     loadTrades();
   } catch (e) {
-    alert('Error logging trade');
+    alert('Error logging trade.');
     console.error(e);
   }
 });
 
+// Load trade log from Firebase
 async function loadTrades() {
   tradeHistory.innerHTML = '';
   const querySnapshot = await getDocs(collection(db, "trades"));
   querySnapshot.forEach((doc) => {
     const trade = doc.data();
     tradeHistory.innerHTML += `
-      <div class="trade">
+      <div>
         <strong>Time:</strong> ${trade.timestamp}<br>
         <strong>Result:</strong> ${trade.result}<br>
         <strong>Lot Size:</strong> ${trade.lotSize}<br>
