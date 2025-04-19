@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShamsTradingJourney</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -29,8 +28,9 @@
         <!-- Risk and Lot Size -->
         <div class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
             <h2 class="text-2xl font-semibold mb-4">Risk & Lot Size</h2>
-            <p>Risk per Trade: <span id="risk-per-trade">0.2%</span></p>
-            <p>Lot Size: <span id="lot-size">0.02</span></p>
+            <p>Risk per Trade: <span id="risk-per-trade">$20.00 (20%)</span></p>
+            <p>Lot Size: <span id="lot-size">0.15</span></p>
+            <p>Margin Required: <span id="margin-required">$45.00</span></p>
         </div>
         <!-- Checklist -->
         <div class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
@@ -91,8 +91,12 @@
                     <textarea id="trade-comments" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
                 </div>
                 <div>
-                    <label for="trade-screenshot" class="block text-lg font-medium mb-2">Screenshot URL (Optional):</label>
-                    <input type="text" id="trade-screenshot" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Paste URL here" />
+                    <label for="trade-screenshot-url" class="block text-lg font-medium mb-2">Screenshot URL (Optional):</label>
+                    <input type="text" id="trade-screenshot-url" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Paste URL here" />
+                </div>
+                <div>
+                    <label for="trade-screenshot-file" class="block text-lg font-medium mb-2">Upload Screenshot (Optional):</label>
+                    <input type="file" id="trade-screenshot-file" accept="image/*" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
             </div>
             <button onclick="logTrade()" class="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">Log Trade</button>
@@ -102,11 +106,6 @@
             <h2 class="text-2xl font-semibold mb-4">Trade Log</h2>
             <button onclick="loadTrades()" class="mb-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">Refresh Trades</button>
             <div id="trade-log" class="space-y-4"></div>
-        </div>
-        <!-- Wins/Losses Chart -->
-        <div class="p-4 bg-gray-800 rounded-lg shadow-md">
-            <h2 class="text-2xl font-semibold mb-4">Wins vs Losses</h2>
-            <canvas id="winLossChart"></canvas>
         </div>
     </div>
 
@@ -136,38 +135,12 @@
         let trades = [];
         let balance = parseFloat(document.getElementById('balance').value) || 100;
         const goal = 100000;
-        let wins = 0, losses = 0;
-
-        // Chart
-        const ctx = document.getElementById('winLossChart').getContext('2d');
-        const winLossChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Wins',
-                    data: [],
-                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }, {
-                    label: 'Losses',
-                    data: [],
-                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    x: { title: { display: true, text: 'Trade Number', color: '#ffffff' }, ticks: { color: '#ffffff' } },
-                    y: { title: { display: true, text: 'Count', color: '#ffffff' }, ticks: { color: '#ffffff' }, beginAtZero: true }
-                },
-                plugins: { legend: { labels: { color: '#ffffff' } } },
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
+        const leverage = 500;
+        const stopLossPips = 10;
+        const takeProfitPips = 20;
+        const pipValuePerLot = 6.83; // Adjusted to match table: $20 profit for 0.15 lots at 20 pips
+        const currentPrice = 150; // Approx USDJPY price for margin calc
+        const maxLotSizeCap = 200;
 
         // Update Balance and Progress
         function updateBalanceAndProgress() {
@@ -178,12 +151,33 @@
             updateRiskAndLotSize();
         }
 
-        // Update Risk and Lot Size
+        // Update Risk and Lot Size (Derived from Table 1)
         function updateRiskAndLotSize() {
-            const riskPerTrade = (balance * 0.002).toFixed(2); // 0.2% risk
-            const lotSize = (riskPerTrade / 1000).toFixed(2); // Simplified lot size calc
-            document.getElementById('risk-per-trade').textContent = `$${riskPerTrade}`;
-            document.getElementById('lot-size').textContent = lotSize;
+            // Risk is 20% until lot size hits 200, then risk amount is capped at $27,320
+            let riskPercentage = 0.2;
+            let riskAmount = balance * riskPercentage;
+            let maxLotSize = balance / (100000 * currentPrice / leverage); // Balance / 300
+
+            // Calculate lot size based on risk: Risk Amount = Lot Size * SL Pips * Pip Value
+            let lotSize = riskAmount / (stopLossPips * pipValuePerLot);
+
+            // Cap lot size based on balance or max cap of 200
+            lotSize = Math.min(lotSize, maxLotSize, maxLotSizeCap);
+
+            // If lot size hits 200, cap the risk amount at $27,320 (as per table)
+            if (lotSize >= maxLotSizeCap) {
+                lotSize = maxLotSizeCap;
+                riskAmount = lotSize * stopLossPips * pipValuePerLot; // $27,320
+                riskPercentage = riskAmount / balance;
+            }
+
+            // Calculate margin: Margin = (Lot Size * 100,000 * Price) / Leverage
+            let marginRequired = (lotSize * 100000 * currentPrice) / leverage;
+
+            document.getElementById('risk-per-trade').textContent = `$${riskAmount.toFixed(2)} (${(riskPercentage * 100).toFixed(1)}%)`;
+            document.getElementById('lot-size').textContent = lotSize.toFixed(2);
+            document.getElementById('margin-required').textContent = `$${marginRequired.toFixed(2)}`;
+            return { riskAmount, lotSize, marginRequired };
         }
 
         // Load Trades from Firestore
@@ -194,16 +188,15 @@
                 trades.push(doc.data());
             });
             renderTradeLog();
-            updateChart();
         }
 
         // Save Trade to Firestore
         async function saveTrade(trade) {
             const tradeId = Date.now().toString();
+            trade.tradeId = tradeId;
             await db.collection('trades').doc(tradeId).set(trade);
             trades.push(trade);
             renderTradeLog();
-            updateChart();
         }
 
         // Delete Trade from Firestore
@@ -211,7 +204,6 @@
             await db.collection('trades').doc(tradeId).delete();
             trades = trades.filter(trade => trade.tradeId !== tradeId);
             renderTradeLog();
-            updateChart();
         }
 
         // Render Trade Log
@@ -223,34 +215,19 @@
                 tradeDiv.className = 'p-4 bg-gray-700 rounded-lg';
                 tradeDiv.innerHTML = `
                     <p><strong>Trade #${trade.tradeNumber}</strong>: ${trade.outcome.charAt(0).toUpperCase() + trade.outcome.slice(1)}</p>
+                    <p>Balance Before: $${trade.balanceBefore.toFixed(2)}</p>
+                    <p>Lot Size: ${trade.lotSize.toFixed(2)}</p>
+                    <p>Risk: $${trade.riskAmount.toFixed(2)}</p>
+                    <p>SL/TP: ${stopLossPips}/${takeProfitPips} pips</p>
+                    <p>Profit/Loss: $${trade.profitLoss.toFixed(2)}</p>
+                    <p>Balance After: $${trade.balanceAfter.toFixed(2)}</p>
                     <p>Comments: ${trade.comments}</p>
-                    ${trade.screenshot ? `<p><a href="${trade.screenshot}" target="_blank" class="text-blue-400 underline">View Screenshot</a></p>` : ''}
+                    ${trade.screenshotUrl ? `<p><a href="${trade.screenshotUrl}" target="_blank" class="text-blue-400 underline">View Screenshot URL</a></p>` : ''}
+                    ${trade.screenshotBase64 ? `<p><img src="${trade.screenshotBase64}" alt="Trade Screenshot" class="max-w-full h-auto rounded-lg mt-2" style="max-height: 200px;" /></p>` : ''}
                     <button onclick="deleteTrade('${trade.tradeId}')" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">Delete</button>
                 `;
                 tradeLog.appendChild(tradeDiv);
             });
-        }
-
-        // Update Chart
-        function updateChart() {
-            wins = trades.filter(trade => trade.outcome === 'win').length;
-            losses = trades.filter(trade => trade.outcome === 'loss').length;
-            const tradeNumbers = trades.map(trade => trade.tradeNumber);
-            let cumulativeWins = [];
-            let cumulativeLosses = [];
-            let winCount = 0, lossCount = 0;
-
-            trades.forEach(trade => {
-                if (trade.outcome === 'win') winCount++;
-                else if (trade.outcome === 'loss') lossCount++;
-                cumulativeWins.push(winCount);
-                cumulativeLosses.push(lossCount);
-            });
-
-            winLossChart.data.labels = tradeNumbers;
-            winLossChart.data.datasets[0].data = cumulativeWins;
-            winLossChart.data.datasets[1].data = cumulativeLosses;
-            winLossChart.update();
         }
 
         // Set Checklist Item
@@ -286,28 +263,70 @@
         function logTrade() {
             const outcome = document.getElementById('trade-outcome').value;
             const comments = document.getElementById('trade-comments').value;
-            const screenshot = document.getElementById('trade-screenshot').value;
+            const screenshotUrl = document.getElementById('trade-screenshot-url').value;
+            const screenshotFileInput = document.getElementById('trade-screenshot-file');
             const tradeNumber = trades.length + 1;
-            const trade = { tradeId: Date.now().toString(), tradeNumber, outcome, comments, screenshot };
-            saveTrade(trade);
+
+            // Calculate risk and lot size before the trade
+            const { riskAmount, lotSize, marginRequired } = updateRiskAndLotSize();
+
+            // Calculate profit/loss and new balance
+            const balanceBefore = balance;
+            let profitLoss;
             if (outcome === 'win') {
-                balance *= 1.2; // 20% gain
+                profitLoss = takeProfitPips * pipValuePerLot * lotSize; // 20 pips profit
+                balance += profitLoss;
             } else {
-                balance *= 0.998; // 0.2% loss
+                profitLoss = - (stopLossPips * pipValuePerLot * lotSize); // 10 pips loss
+                balance += profitLoss;
             }
-            document.getElementById('balance').value = balance.toFixed(2);
-            updateBalanceAndProgress();
-            document.getElementById('trade-entry').classList.add('hidden');
-            document.getElementById('checklist-result').textContent = '';
-            Object.keys(checklist).forEach(key => {
-                checklist[key] = null;
-                const yesButton = document.getElementById(`${key}-yes`);
-                const noButton = document.getElementById(`${key}-no`);
-                yesButton.classList.remove('bg-green-600', 'hover:bg-green-700');
-                yesButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
-                noButton.classList.remove('bg-red-600', 'hover:bg-red-700');
-                noButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
-            });
+
+            // Handle screenshot file upload
+            const tradeData = {
+                tradeNumber,
+                outcome,
+                balanceBefore,
+                lotSize,
+                riskAmount,
+                profitLoss,
+                balanceAfter: balance,
+                comments,
+                screenshotUrl: screenshotUrl || null
+            };
+
+            if (screenshotFileInput.files.length > 0) {
+                const file = screenshotFileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    tradeData.screenshotBase64 = event.target.result;
+                    saveTrade(tradeData);
+                    finalizeTrade();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                tradeData.screenshotBase64 = null;
+                saveTrade(tradeData);
+                finalizeTrade();
+            }
+
+            function finalizeTrade() {
+                document.getElementById('balance').value = balance.toFixed(2);
+                updateBalanceAndProgress();
+                document.getElementById('trade-entry').classList.add('hidden');
+                document.getElementById('checklist-result').textContent = '';
+                document.getElementById('trade-screenshot-file').value = ''; // Reset file input
+                document.getElementById('trade-screenshot-url').value = ''; // Reset URL input
+                document.getElementById('trade-comments').value = ''; // Reset comments
+                Object.keys(checklist).forEach(key => {
+                    checklist[key] = null;
+                    const yesButton = document.getElementById(`${key}-yes`);
+                    const noButton = document.getElementById(`${key}-no`);
+                    yesButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    yesButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                    noButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    noButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                });
+            }
         }
 
         // Event Listeners
