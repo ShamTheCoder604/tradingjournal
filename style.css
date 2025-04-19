@@ -1,52 +1,78 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
   font-family: 'Arial', sans-serif;
-  background: #f5f7fa;
+  background: #f4f7fc;
   margin: 0;
   padding: 20px;
 }
 
 .container {
-  max-width: 800px;
-  margin: auto;
-  background: white;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
   padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.1);
-}
-
-.section {
-  margin-bottom: 30px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 h1, h2 {
+  color: #007bff;
   text-align: center;
 }
 
 input, textarea, button {
   width: 100%;
-  padding: 10px;
-  margin-top: 10px;
+  padding: 12px;
+  font-size: 16px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 8px;
 }
 
 button {
-  background: #007bff;
+  background-color: #28a745;
   color: white;
-  border: none;
   cursor: pointer;
+  border: none;
 }
 
 button:disabled {
-  background: grey;
+  background-color: grey;
 }
 
 textarea {
-  height: 100px;
+  height: 120px;
 }
 
-.log {
-  background: #eef2f5;
-  padding: 20px;
+.checklist {
+  margin-top: 10px;
+}
+
+.checklist div {
+  margin-bottom: 10px;
+}
+
+section {
+  margin-bottom: 30px;
+}
+
+#lotSizeResult {
+  font-size: 16px;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+#tradeHistory {
+  margin-top: 20px;
+}
+
+#tradeHistory div {
+  background: #eef2f7;
+  padding: 10px;
+  margin-bottom: 10px;
   border-radius: 8px;
-  max-height: 400px;
-  overflow-y: scroll;
 }
