@@ -26,6 +26,12 @@
                 <p id="progress-text" class="text-sm mt-1">0.1% of goal ($100 / $100,000)</p>
             </div>
         </div>
+        <!-- Risk and Lot Size -->
+        <div class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">Risk & Lot Size</h2>
+            <p>Risk per Trade: <span id="risk-per-trade">0.2%</span></p>
+            <p>Lot Size: <span id="lot-size">0.02</span></p>
+        </div>
         <!-- Checklist -->
         <div class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
             <h2 class="text-2xl font-semibold mb-4">USDJPY Trading Checklist</h2>
@@ -33,36 +39,36 @@
                 <div class="flex items-center justify-between">
                     <span>EMA Alignment (5 & 13):</span>
                     <div class="space-x-2">
-                        <button onclick="setChecklist('ema', true)" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Yes</button>
-                        <button onclick="setChecklist('ema', false)" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">No</button>
+                        <button id="ema-yes" onclick="setChecklist('ema', true)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Yes</button>
+                        <button id="ema-no" onclick="setChecklist('ema', false)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">No</button>
                     </div>
                 </div>
                 <div class="flex items-center justify-between">
                     <span>MACD Confirmation:</span>
                     <div class="space-x-2">
-                        <button onclick="setChecklist('macd', true)" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Yes</button>
-                        <button onclick="setChecklist('macd', false)" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">No</button>
+                        <button id="macd-yes" onclick="setChecklist('macd', true)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Yes</button>
+                        <button id="macd-no" onclick="setChecklist('macd', false)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">No</button>
                     </div>
                 </div>
                 <div class="flex items-center justify-between">
                     <span>Pullback Identified:</span>
                     <div class="space-x-2">
-                        <button onclick="setChecklist('pullback', true)" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Yes</button>
-                        <button onclick="setChecklist('pullback', false)" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">No</button>
+                        <button id="pullback-yes" onclick="setChecklist('pullback', true)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Yes</button>
+                        <button id="pullback-no" onclick="setChecklist('pullback', false)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">No</button>
                     </div>
                 </div>
                 <div class="flex items-center justify-between">
                     <span>Supertrend Direction:</span>
                     <div class="space-x-2">
-                        <button onclick="setChecklist('supertrend', true)" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Yes</button>
-                        <button onclick="setChecklist('supertrend', false)" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">No</button>
+                        <button id="supertrend-yes" onclick="setChecklist('supertrend', true)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Yes</button>
+                        <button id="supertrend-no" onclick="setChecklist('supertrend', false)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">No</button>
                     </div>
                 </div>
                 <div class="flex items-center justify-between">
                     <span>Trade Count (Max 2/Day):</span>
                     <div class="space-x-2">
-                        <button onclick="setChecklist('tradeCount', true)" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Yes</button>
-                        <button onclick="setChecklist('tradeCount', false)" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">No</button>
+                        <button id="tradeCount-yes" onclick="setChecklist('tradeCount', true)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Yes</button>
+                        <button id="tradeCount-no" onclick="setChecklist('tradeCount', false)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">No</button>
                     </div>
                 </div>
             </div>
@@ -96,12 +102,6 @@
             <h2 class="text-2xl font-semibold mb-4">Trade Log</h2>
             <button onclick="loadTrades()" class="mb-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">Refresh Trades</button>
             <div id="trade-log" class="space-y-4"></div>
-        </div>
-        <!-- Risk and Lot Size -->
-        <div class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
-            <h2 class="text-2xl font-semibold mb-4">Risk & Lot Size</h2>
-            <p>Risk per Trade: <span id="risk-per-trade">0.2%</span></p>
-            <p>Lot Size: <span id="lot-size">0.02</span></p>
         </div>
         <!-- Wins/Losses Chart -->
         <div class="p-4 bg-gray-800 rounded-lg shadow-md">
@@ -141,21 +141,21 @@
         // Chart
         const ctx = document.getElementById('winLossChart').getContext('2d');
         const winLossChart = new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: [],
                 datasets: [{
                     label: 'Wins',
                     data: [],
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
                     borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    fill: false
+                    borderWidth: 1
                 }, {
                     label: 'Losses',
                     data: [],
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
                     borderColor: 'rgba(255, 99, 132, 1)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    fill: false
+                    borderWidth: 1
                 }]
             },
             options: {
@@ -165,8 +165,7 @@
                 },
                 plugins: { legend: { labels: { color: '#ffffff' } } },
                 responsive: true,
-                maintainAspectRatio: false,
-                backgroundColor: 'transparent'
+                maintainAspectRatio: false
             }
         });
 
@@ -236,18 +235,40 @@
         function updateChart() {
             wins = trades.filter(trade => trade.outcome === 'win').length;
             losses = trades.filter(trade => trade.outcome === 'loss').length;
-            const labels = trades.map(trade => trade.tradeNumber);
-            const winData = trades.map(trade => trade.outcome === 'win' ? 1 : 0);
-            const lossData = trades.map(trade => trade.outcome === 'loss' ? 1 : 0);
-            winLossChart.data.labels = labels;
-            winLossChart.data.datasets[0].data = winData;
-            winLossChart.data.datasets[1].data = lossData;
+            const tradeNumbers = trades.map(trade => trade.tradeNumber);
+            let cumulativeWins = [];
+            let cumulativeLosses = [];
+            let winCount = 0, lossCount = 0;
+
+            trades.forEach(trade => {
+                if (trade.outcome === 'win') winCount++;
+                else if (trade.outcome === 'loss') lossCount++;
+                cumulativeWins.push(winCount);
+                cumulativeLosses.push(lossCount);
+            });
+
+            winLossChart.data.labels = tradeNumbers;
+            winLossChart.data.datasets[0].data = cumulativeWins;
+            winLossChart.data.datasets[1].data = cumulativeLosses;
             winLossChart.update();
         }
 
         // Set Checklist Item
         function setChecklist(item, value) {
             checklist[item] = value;
+            const yesButton = document.getElementById(`${item}-yes`);
+            const noButton = document.getElementById(`${item}-no`);
+            if (value) {
+                yesButton.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                yesButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                noButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+                noButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
+            } else {
+                noButton.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                noButton.classList.add('bg-red-600', 'hover:bg-red-700');
+                yesButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+                yesButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
+            }
             document.getElementById('checklist-result').textContent = '';
             document.getElementById('trade-entry').classList.add('hidden');
         }
@@ -278,7 +299,15 @@
             updateBalanceAndProgress();
             document.getElementById('trade-entry').classList.add('hidden');
             document.getElementById('checklist-result').textContent = '';
-            Object.keys(checklist).forEach(key => checklist[key] = null);
+            Object.keys(checklist).forEach(key => {
+                checklist[key] = null;
+                const yesButton = document.getElementById(`${key}-yes`);
+                const noButton = document.getElementById(`${key}-no`);
+                yesButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+                yesButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                noButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+                noButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
+            });
         }
 
         // Event Listeners
