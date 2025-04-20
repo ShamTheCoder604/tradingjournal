@@ -13,17 +13,10 @@
     <div class="container mx-auto p-4 max-w-4xl">
         <!-- Header -->
         <h1 class="text-5xl font-bold text-center mb-4 text-white">ShamsTradingJourney</h1>
-        <!-- Balance and Progress -->
+        <!-- Balance -->
         <div class="mb-6">
             <label for="balance" class="block text-lg font-medium mb-2">Account Balance ($):</label>
             <input type="number" id="balance" value="100" step="0.01" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <div class="mt-4">
-                <label for="progress" class="block text-lg font-medium mb-2">Progress to $100,000:</label>
-                <div class="w-full bg-gray-700 rounded-full h-4">
-                    <div id="progress-bar" class="bg-blue-600 h-4 rounded-full" style="width: 0.1%"></div>
-                </div>
-                <p id="progress-text" class="text-sm mt-1">0.1% of goal ($100 / $100,000)</p>
-            </div>
         </div>
         <!-- Risk and Lot Size -->
         <div class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
@@ -155,7 +148,6 @@
         // Trade Data
         let trades = [];
         let balance = parseFloat(document.getElementById('balance').value) || 100;
-        const goal = 100000;
         const leverage = 500;
         const stopLossPips = 20;
         const takeProfitPips = 40;
@@ -164,12 +156,9 @@
         const maxLotSizeCap = 200;
         let tradeStartTime = null;
 
-        // Update Balance and Progress
-        function updateBalanceAndProgress() {
+        // Update Balance and Risk
+        function updateBalanceAndRisk() {
             balance = parseFloat(document.getElementById('balance').value) || 100;
-            const progress = (balance / goal) * 100;
-            document.getElementById('progress-bar').style.width = `${progress}%`;
-            document.getElementById('progress-text').textContent = `${progress.toFixed(2)}% of goal ($${balance.toFixed(2)} / $${goal.toFixed(2)})`;
             updateRiskAndLotSize();
         }
 
@@ -217,7 +206,7 @@
                     if (tradeData.tradeNumber === trades.length) {
                         balance = tradeData.balanceAfter;
                         document.getElementById('balance').value = balance.toFixed(2);
-                        updateBalanceAndProgress();
+                        updateBalanceAndRisk();
                     }
                 });
                 console.log("Trades loaded successfully:", trades);
@@ -254,7 +243,7 @@
                     balance = 100; // Reset to initial balance
                 }
                 document.getElementById('balance').value = balance.toFixed(2);
-                updateBalanceAndProgress();
+                updateBalanceAndRisk();
                 renderTradeLog();
                 console.log("Trade deleted successfully, new balance:", balance);
             } catch (error) {
@@ -301,15 +290,13 @@
             checklist[item] = value;
             const yesButton = document.getElementById(`${item}-yes`);
             const noButton = document.getElementById(`${item}-no`);
+            yesButton.classList.remove('bg-gray-500', 'bg-green-600', 'hover:bg-gray-600', 'hover:bg-green-700');
+            noButton.classList.remove('bg-gray-500', 'bg-red-600', 'hover:bg-gray-600', 'hover:bg-red-700');
             if (value) {
-                yesButton.classList.remove('bg-gray-500', 'hover:bg-gray-600');
                 yesButton.classList.add('bg-green-600', 'hover:bg-green-700');
-                noButton.classList.remove('bg-red-600', 'hover:bg-red-700');
                 noButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
             } else {
-                noButton.classList.remove('bg-gray-500', 'hover:bg-gray-600');
                 noButton.classList.add('bg-red-600', 'hover:bg-red-700');
-                yesButton.classList.remove('bg-green-600', 'hover:bg-green-700');
                 yesButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
             }
             document.getElementById('checklist-result').textContent = '';
@@ -325,9 +312,11 @@
             if (allYes) {
                 tradeStartTime = new Date();
                 document.getElementById('trade-entry').classList.remove('hidden');
+                console.log("Checklist passed, trade entry form shown.");
             } else {
                 tradeStartTime = null;
                 document.getElementById('trade-entry').classList.add('hidden');
+                console.log("Checklist failed, trade entry form hidden.");
             }
         }
 
@@ -410,7 +399,7 @@
 
             function finalizeTrade() {
                 document.getElementById('balance').value = balance.toFixed(2);
-                updateBalanceAndProgress();
+                updateBalanceAndRisk();
                 document.getElementById('trade-entry').classList.add('hidden');
                 document.getElementById('checklist-result').textContent = '';
                 document.getElementById('trade-screenshot-file').value = '';
@@ -429,11 +418,12 @@
             }
         }
 
-        // Event Listeners
-        document.getElementById('balance').addEventListener('input', updateBalanceAndProgress);
+        // Event Listeners for Balance Input
+        document.getElementById('balance').addEventListener('input', updateBalanceAndRisk);
+        document.getElementById('balance').addEventListener('change', updateBalanceAndRisk);
 
         // Initial Load
-        updateBalanceAndProgress();
+        updateBalanceAndRisk();
         loadTrades();
     </script>
 </body>
