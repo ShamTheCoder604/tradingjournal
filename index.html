@@ -1,58 +1,440 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sham's Trading Journal</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShamsTradingJourney</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
-<body>
-  <div class="container">
-    <h1>Sham's USDJPY Trading Journal</h1>
-    
-    <div class="section">
-      <label for="balance">Account Balance ($):</label>
-      <input type="number" id="balance" placeholder="Enter balance">
-      <button id="calculateLot">Calculate Lot Size</button>
-      <div id="lotSizeResult"></div>
+<body class="bg-black font-sans text-white">
+    <div class="container mx-auto p-4 max-w-4xl">
+        <!-- Header -->
+        <h1 class="text-5xl font-bold text-center mb-4 text-white">ShamsTradingJourney</h1>
+        <!-- Balance and Progress -->
+        <div class="mb-6">
+            <label for="balance" class="block text-lg font-medium mb-2">Account Balance ($):</label>
+            <input type="number" id="balance" value="100" step="0.01" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <div class="mt-4">
+                <label for="progress" class="block text-lg font-medium mb-2">Progress to $100,000:</label>
+                <div class="w-full bg-gray-700 rounded-full h-4">
+                    <div id="progress-bar" class="bg-blue-600 h-4 rounded-full" style="width: 0.1%"></div>
+                </div>
+                <p id="progress-text" class="text-sm mt-1">0.1% of goal ($100 / $100,000)</p>
+            </div>
+        </div>
+        <!-- Risk and Lot Size -->
+        <div class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">Risk & Lot Size</h2>
+            <p>Risk per Trade: <span id="risk-per-trade">$20.00 (20%)</span></p>
+            <p>Lot Size: <span id="lot-size">0.10</span></p>
+            <p>Margin Required: <span id="margin-required">$30.00</span></p>
+        </div>
+        <!-- Checklist -->
+        <div class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">USDJPY Trading Checklist</h2>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span>5-min EMA Crossover:</span>
+                    <div class="space-x-2">
+                        <button id="ema-yes" onclick="setChecklist('ema', true)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Yes</button>
+                        <button id="ema-no" onclick="setChecklist('ema', false)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">No</button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span>5-min MACD Crossover:</span>
+                    <div class="space-x-2">
+                        <button id="macd-yes" onclick="setChecklist('macd', true)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Yes</button>
+                        <button id="macd-no" onclick="setChecklist('macd', false)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">No</button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span>Pullback Candle Closed:</span>
+                    <div class="space-x-2">
+                        <button id="pullback-yes" onclick="setChecklist('pullback', true)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Yes</button>
+                        <button id="pullback-no" onclick="setChecklist('pullback', false)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">No</button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span>Supertrend Active in Direction:</span>
+                    <div class="space-x-2">
+                        <button id="supertrend-yes" onclick="setChecklist('supertrend', true)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Yes</button>
+                        <button id="supertrend-no" onclick="setChecklist('supertrend', false)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">No</button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span>Traded Less Than 2 Times Today:</span>
+                    <div class="space-x-2">
+                        <button id="tradeCount-yes" onclick="setChecklist('tradeCount', true)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Yes</button>
+                        <button id="tradeCount-no" onclick="setChecklist('tradeCount', false)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">No</button>
+                    </div>
+                </div>
+            </div>
+            <button onclick="submitChecklist()" class="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">Submit Checklist</button>
+            <p id="checklist-result" class="mt-2 text-center font-medium"></p>
+        </div>
+        <!-- Trade Entry -->
+        <div id="trade-entry" class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md hidden">
+            <h2 class="text-2xl font-semibold mb-4">Log Trade</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="trade-outcome" class="block text-lg font-medium mb-2">Trade Outcome:</label>
+                    <select id="trade-outcome" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="win">Win</option>
+                        <option value="loss">Loss</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="trade-comments" class="block text-lg font-medium mb-2">Comments:</label>
+                    <textarea id="trade-comments" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
+                </div>
+                <div>
+                    <label for="trade-screenshot-url" class="block text-lg font-medium mb-2">Screenshot URL (Optional):</label>
+                    <input type="text" id="trade-screenshot-url" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Paste URL here" />
+                </div>
+                <div>
+                    <label for="trade-screenshot-file" class="block text-lg font-medium mb-2">Upload Screenshot (Optional):</label>
+                    <input type="file" id="trade-screenshot-file" accept="image/*" class="w-full p-2 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+            </div>
+            <button onclick="logTrade()" class="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">Log Trade</button>
+        </div>
+        <!-- Trade Log -->
+        <div class="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">Trade Log</h2>
+            <button onclick="loadTrades()" class="mb-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">Refresh Trades</button>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-gray-700">
+                            <th class="p-2">Trade #</th>
+                            <th class="p-2">Date</th>
+                            <th class="p-2">Start Time</th>
+                            <th class="p-2">End Time</th>
+                            <th class="p-2">Outcome</th>
+                            <th class="p-2">Balance Before</th>
+                            <th class="p-2">Lot Size</th>
+                            <th class="p-2">Risk</th>
+                            <th class="p-2">Profit/Loss</th>
+                            <th class="p-2">Balance After</th>
+                            <th class="p-2">Comments</th>
+                            <th class="p-2">Screenshot</th>
+                            <th class="p-2">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trade-log"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
-    <div class="section checklist">
-      <h2>Entry Checklist</h2>
-      <div>
-        <input type="checkbox" class="checklist"> 5 Min EMA Crossover
-      </div>
-      <div>
-        <input type="checkbox" class="checklist"> 5 Min MACD Crossover before EMA
-      </div>
-      <div>
-        <input type="checkbox" class="checklist"> Pullback candle closed
-      </div>
-      <div>
-        <input type="checkbox" class="checklist"> Supertrend active in trade direction
-      </div>
-      <div>
-        <input type="checkbox" class="checklist"> Only Asian or London Open trade
-      </div>
-    </div>
+    <script>
+        // Firebase Initialization
+        const firebaseConfig = {
+            apiKey: "AIzaSyBcAUB1jY7_D4Bh27omjl1RNwRe112z7iU",
+            authDomain: "shamstradingjourney.firebaseapp.com",
+            projectId: "shamstradingjourney",
+            storageBucket: "shamstradingjourney.firebasestorage.app",
+            messagingSenderId: "974388489062",
+            appId: "1:974388489062:web:14b23d225b4687fb8236a7"
+        };
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-    <div class="section">
-      <button id="wonButton" disabled>Won</button>
-      <button id="lostButton" disabled>Lost</button>
-    </div>
+        // Checklist State
+        let checklist = {
+            ema: null,
+            macd: null,
+            pullback: null,
+            supertrend: null,
+            tradeCount: null
+        };
 
-    <div class="section">
-      <textarea id="comments" placeholder="Enter trade comments..."></textarea>
-      <button id="submitTrade" disabled>Submit Trade</button>
-    </div>
+        // Trade Data
+        let trades = [];
+        let balance = parseFloat(document.getElementById('balance').value) || 100;
+        const goal = 100000;
+        const leverage = 500;
+        const stopLossPips = 20;
+        const takeProfitPips = 40;
+        const pipValuePerLot = 7.035; // Derived from $14.07 / (20 pips * 0.1 lots)
+        const currentPrice = 150; // Approx USDJPY price for margin calc
+        const maxLotSizeCap = 200;
+        let tradeStartTime = null;
 
-    <div class="section">
-      <h2>Trade Log</h2>
-      <div id="tradeHistory"></div>
-    </div>
-  </div>
+        // Update Balance and Progress
+        function updateBalanceAndProgress() {
+            balance = parseFloat(document.getElementById('balance').value) || 100;
+            const progress = (balance / goal) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-text').textContent = `${progress.toFixed(2)}% of goal ($${balance.toFixed(2)} / $${goal.toFixed(2)})`;
+            updateRiskAndLotSize();
+        }
 
-  <script type="module" src="firebase-config.js"></script>
-  <script type="module" src="app.js"></script>
+        // Update Risk and Lot Size
+        function updateRiskAndLotSize() {
+            let riskPercentage = 0.2;
+            let riskAmount = balance * riskPercentage;
+            let maxLotSize = balance / (100000 * currentPrice / leverage); // Balance / 300
+
+            // Calculate lot size: Risk Amount = Lot Size * SL Pips * Pip Value
+            let lotSize = riskAmount / (stopLossPips * pipValuePerLot);
+
+            // Cap lot size
+            lotSize = Math.min(lotSize, maxLotSize, maxLotSizeCap);
+
+            // If lot size hits 200, cap the risk amount
+            if (lotSize >= maxLotSizeCap) {
+                lotSize = maxLotSizeCap;
+                riskAmount = lotSize * stopLossPips * pipValuePerLot; // $28,140
+                riskPercentage = riskAmount / balance;
+            }
+
+            // Calculate margin
+            let marginRequired = (lotSize * 100000 * currentPrice) / leverage;
+
+            document.getElementById('risk-per-trade').textContent = `$${riskAmount.toFixed(2)} (${(riskPercentage * 100).toFixed(1)}%)`;
+            document.getElementById('lot-size').textContent = lotSize.toFixed(2);
+            document.getElementById('margin-required').textContent = `$${marginRequired.toFixed(2)}`;
+            return { riskAmount, lotSize, marginRequired };
+        }
+
+        // Load Trades from Firestore
+        async function loadTrades() {
+            try {
+                trades = [];
+                const snapshot = await db.collection('trades').orderBy('tradeNumber').get();
+                if (snapshot.empty) {
+                    console.log("No trades found in Firestore.");
+                    renderTradeLog();
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const tradeData = doc.data();
+                    trades.push(tradeData);
+                    if (tradeData.tradeNumber === trades.length) {
+                        balance = tradeData.balanceAfter;
+                        document.getElementById('balance').value = balance.toFixed(2);
+                        updateBalanceAndProgress();
+                    }
+                });
+                console.log("Trades loaded successfully:", trades);
+                renderTradeLog();
+            } catch (error) {
+                console.error("Error loading trades:", error);
+                document.getElementById('trade-log').innerHTML = '<tr><td colspan="13" class="p-2 text-red-400">Error loading trades. Please try again.</td></tr>';
+            }
+        }
+
+        // Save Trade to Firestore
+        async function saveTrade(trade) {
+            try {
+                const tradeId = Date.now().toString();
+                trade.tradeId = tradeId;
+                await db.collection('trades').doc(tradeId).set(trade);
+                trades.push(trade);
+                console.log("Trade saved successfully:", trade);
+                renderTradeLog();
+            } catch (error) {
+                console.error("Error saving trade:", error);
+                document.getElementById('trade-log').innerHTML = '<tr><td colspan="13" class="p-2 text-red-400">Error saving trade. Please try again.</td></tr>';
+            }
+        }
+
+        // Delete Trade from Firestore
+        async function deleteTrade(tradeId) {
+            try {
+                await db.collection('trades').doc(tradeId).delete();
+                trades = trades.filter(trade => trade.tradeId !== tradeId);
+                if (trades.length > 0) {
+                    balance = trades[trades.length - 1].balanceAfter;
+                } else {
+                    balance = 100; // Reset to initial balance
+                }
+                document.getElementById('balance').value = balance.toFixed(2);
+                updateBalanceAndProgress();
+                renderTradeLog();
+                console.log("Trade deleted successfully, new balance:", balance);
+            } catch (error) {
+                console.error("Error deleting trade:", error);
+                document.getElementById('trade-log').innerHTML = '<tr><td colspan="13" class="p-2 text-red-400">Error deleting trade. Please try again.</td></tr>';
+            }
+        }
+
+        // Render Trade Log
+        function renderTradeLog() {
+            const tradeLog = document.getElementById('trade-log');
+            tradeLog.innerHTML = '';
+            if (trades.length === 0) {
+                tradeLog.innerHTML = '<tr><td colspan="13" class="p-2 text-gray-400">No trades logged yet.</td></tr>';
+                return;
+            }
+            trades.forEach(trade => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-600';
+                row.innerHTML = `
+                    <td class="p-2">${trade.tradeNumber}</td>
+                    <td class="p-2">${trade.date}</td>
+                    <td class="p-2">${trade.startTime}</td>
+                    <td class="p-2">${trade.endTime}</td>
+                    <td class="p-2">${trade.outcome.charAt(0).toUpperCase() + trade.outcome.slice(1)}</td>
+                    <td class="p-2">$${trade.balanceBefore.toFixed(2)}</td>
+                    <td class="p-2">${trade.lotSize.toFixed(2)}</td>
+                    <td class="p-2">$${trade.riskAmount.toFixed(2)}</td>
+                    <td class="p-2">$${trade.profitLoss.toFixed(2)}</td>
+                    <td class="p-2">$${trade.balanceAfter.toFixed(2)}</td>
+                    <td class="p-2">${trade.comments || 'None'}</td>
+                    <td class="p-2">
+                        ${trade.screenshotUrl ? `<a href="${trade.screenshotUrl}" target="_blank" class="text-blue-400 underline">URL</a>` : ''}
+                        ${trade.screenshotBase64 ? `<img src="${trade.screenshotBase64}" alt="Screenshot" class="max-w-[100px] h-auto rounded mt-1" />` : ''}
+                    </td>
+                    <td class="p-2"><button onclick="deleteTrade('${trade.tradeId}')" class="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Delete</button></td>
+                `;
+                tradeLog.appendChild(row);
+            });
+        }
+
+        // Set Checklist Item
+        function setChecklist(item, value) {
+            checklist[item] = value;
+            const yesButton = document.getElementById(`${item}-yes`);
+            const noButton = document.getElementById(`${item}-no`);
+            if (value) {
+                yesButton.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                yesButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                noButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+                noButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
+            } else {
+                noButton.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                noButton.classList.add('bg-red-600', 'hover:bg-red-700');
+                yesButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+                yesButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
+            }
+            document.getElementById('checklist-result').textContent = '';
+            document.getElementById('trade-entry').classList.add('hidden');
+        }
+
+        // Submit Checklist
+        function submitChecklist() {
+            const allYes = Object.values(checklist).every(value => value === true);
+            const resultText = allYes ? 'Green Light: Proceed with Trade' : 'Reject: Checklist Not Met';
+            document.getElementById('checklist-result').textContent = resultText;
+            document.getElementById('checklist-result').className = `mt-2 text-center font-medium ${allYes ? 'text-green-400' : 'text-red-400'}`;
+            if (allYes) {
+                tradeStartTime = new Date();
+                document.getElementById('trade-entry').classList.remove('hidden');
+            } else {
+                tradeStartTime = null;
+                document.getElementById('trade-entry').classList.add('hidden');
+            }
+        }
+
+        // Log Trade
+        async function logTrade() {
+            if (!tradeStartTime) {
+                alert("Trade start time not recorded. Please submit the checklist again.");
+                return;
+            }
+
+            const outcome = document.getElementById('trade-outcome').value;
+            const comments = document.getElementById('trade-comments').value;
+            const screenshotUrl = document.getElementById('trade-screenshot-url').value;
+            const screenshotFileInput = document.getElementById('trade-screenshot-file');
+            const tradeNumber = trades.length + 1;
+            const endTime = new Date();
+
+            // Format date and times
+            const date = tradeStartTime.toISOString().split('T')[0];
+            const startTimeStr = tradeStartTime.toTimeString().split(' ')[0];
+            const endTimeStr = endTime.toTimeString().split(' ')[0];
+
+            // Calculate risk and lot size
+            const { riskAmount, lotSize, marginRequired } = updateRiskAndLotSize();
+
+            // Calculate profit/loss and new balance
+            const balanceBefore = balance;
+            let profitLoss;
+            if (outcome === 'win') {
+                profitLoss = takeProfitPips * pipValuePerLot * lotSize; // 40 pips profit
+                balance += profitLoss;
+            } else {
+                profitLoss = - (stopLossPips * pipValuePerLot * lotSize); // 20 pips loss
+                balance += profitLoss;
+            }
+
+            // Handle screenshot file upload
+            const tradeData = {
+                tradeNumber,
+                date,
+                startTime: startTimeStr,
+                endTime: endTimeStr,
+                outcome,
+                balanceBefore,
+                lotSize,
+                riskAmount,
+                profitLoss,
+                balanceAfter: balance,
+                comments: comments || 'None'
+            };
+
+            try {
+                if (screenshotFileInput.files.length > 0) {
+                    const file = screenshotFileInput.files[0];
+                    const reader = new FileReader();
+                    reader.onload = async function(event) {
+                        tradeData.screenshotBase64 = event.target.result;
+                        tradeData.screenshotUrl = screenshotUrl || null;
+                        await saveTrade(tradeData);
+                        finalizeTrade();
+                    };
+                    reader.onerror = function(error) {
+                        console.error("Error reading file:", error);
+                        tradeData.screenshotBase64 = null;
+                        tradeData.screenshotUrl = screenshotUrl || null;
+                        await saveTrade(tradeData);
+                        finalizeTrade();
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    tradeData.screenshotBase64 = null;
+                    tradeData.screenshotUrl = screenshotUrl || null;
+                    await saveTrade(tradeData);
+                    finalizeTrade();
+                }
+            } catch (error) {
+                console.error("Error in logTrade:", error);
+                document.getElementById('trade-log').innerHTML = '<tr><td colspan="13" class="p-2 text-red-400">Error logging trade. Please try again.</td></tr>';
+            }
+
+            function finalizeTrade() {
+                document.getElementById('balance').value = balance.toFixed(2);
+                updateBalanceAndProgress();
+                document.getElementById('trade-entry').classList.add('hidden');
+                document.getElementById('checklist-result').textContent = '';
+                document.getElementById('trade-screenshot-file').value = '';
+                document.getElementById('trade-screenshot-url').value = '';
+                document.getElementById('trade-comments').value = '';
+                tradeStartTime = null;
+                Object.keys(checklist).forEach(key => {
+                    checklist[key] = null;
+                    const yesButton = document.getElementById(`${key}-yes`);
+                    const noButton = document.getElementById(`${key}-no`);
+                    yesButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    yesButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                    noButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    noButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                });
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('balance').addEventListener('input', updateBalanceAndProgress);
+
+        // Initial Load
+        updateBalanceAndProgress();
+        loadTrades();
+    </script>
 </body>
 </html>
